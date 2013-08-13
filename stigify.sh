@@ -37,6 +37,8 @@ fi
 function stig {
 echo 0
 
+  #fix log permissions
+  chmod ugo+rx /var/log
 
   if [ $enable_selinux -gt 0 ];then
 echo 2
@@ -393,6 +395,7 @@ install bluetooth /bin/true" > /etc/modprobe.d/disable_bluetooth.conf
 
   #fix syslog permissions
   chmod 0600 /var/log/* >>$logfile 2>&1
+  chmod ugo+rx /var/log >>$logfile 2>&1
   find -O1 /var/log -type d |xargs chmod 0700 >>$logfile 2>&1
 
   #remove privileged accounts
@@ -445,9 +448,9 @@ echo 90
 
 echo 93
 
+  chmod 0744 /var/log/clamav/ -R
   #run freshclam if you wish to update virus definitions - we'll background it as it can take a while
   freshclam >>$logfile 2>&1 &
-  chmod 0744 /var/log/clamav/ -R
   chown clamav:clamav /var/clamav/* >>$logfile 2>&1
   if [ `which setsebool >/dev/null 2>&1` ];then
     setsebool -P clamd_use_jit on
