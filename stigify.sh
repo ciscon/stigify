@@ -4,7 +4,7 @@
 
 #this will force the script to enable selinux if set to non-zero value
 #note:this is not recommended, you should enable selinux before or after stigification manually to assure nothing breaks (which is likely).
-enable_selinux=1
+enable_selinux=0
 
 logfile="/tmp/stig_`date +'%m-%d-%y-%T'`"
 errorlog="/tmp/stig_err_`date +'%m-%d-%y-%T'`"
@@ -91,6 +91,7 @@ echo 20
 
 
 #start auditd for auditctl to work
+chmod 0700 /var/log/audit
 /etc/init.d/auditd start >>$logfile 2>&1
   #audit localtime
   if [ `auditctl -l | grep -c "watch=/etc/localtime"` -ne 1 ];then
@@ -387,6 +388,8 @@ install bluetooth /bin/true" > /etc/modprobe.d/disable_bluetooth.conf
 
   #fix syslog permissions
   chmod 0600 /var/log/* >>$logfile 2>&1
+  cd /var/log
+  find -O1 -type d |xargs chmod 0700
 
   #remove privileged accounts
   userdel shutdown >>$logfile 2>&1
