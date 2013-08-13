@@ -38,7 +38,7 @@ function stig {
 echo 0
 
   #fix log permissions
-  chmod ugo+rx /var/log
+  chmod 755 /var/log
 
   if [ $enable_selinux -gt 0 ];then
 echo 2
@@ -395,8 +395,8 @@ install bluetooth /bin/true" > /etc/modprobe.d/disable_bluetooth.conf
 
   #fix syslog permissions
   chmod 0600 /var/log/* >>$logfile 2>&1
-  chmod ugo+rx /var/log >>$logfile 2>&1
   find -O1 /var/log -type d |xargs chmod 0700 >>$logfile 2>&1
+  chmod 755 /var/log >>$logfile 2>&1
 
   #remove privileged accounts
   userdel shutdown >>$logfile 2>&1
@@ -449,16 +449,17 @@ echo 90
 echo 93
 
   chmod 0744 /var/log/clamav/ -R
-  #run freshclam if you wish to update virus definitions - we'll background it as it can take a while
-  freshclam >>$logfile 2>&1 &
   chown clamav:clamav /var/clamav/* >>$logfile 2>&1
+
+  #run freshclam if you wish to update virus definitions - we'll background it as it can take a while
+  (freshclam >>$logfile 2>&1
   if [ `which setsebool >/dev/null 2>&1` ];then
     setsebool -P clamd_use_jit on
   fi 
-echo 95
-  sed -i 's/^LogFile.*/LogFile \/var\/log\/clamav\/clamav\.log/g' /etc/clamd.conf >>$logfile 2>&1
+  #sed -i 's/^LogFile.*/LogFile \/var\/log\/clamav\/clamav\.log/g' /etc/clamd.conf >>$logfile 2>&1
   chkconfig clamd on >>$logfile 2>&1
-  /etc/init.d/clamd start >>$logfile 2>&1
+  /etc/init.d/clamd start >>$logfile 2>&1)>>$logfile 2>&1 &
+ disown
 
 echo 97
 
@@ -493,6 +494,11 @@ echo 100;sleep 1
 function check_repos {
   echo 5
   sleep 1
+
+  #restore old repos if we've run this before
+  if [ -d /etc/yum.repos.d.stig_backup ];then
+    cp -a /etc/yum.repos.d.stig_backup/* /etc/yum.repos.d/. >>$logfile 2>&1
+  fi
 
   if [ `yum repolist 2>&1|tail -n1|grep -c '[1-9]'` -lt 1 ];then
     echo "There appear to be no repositories enabled, please fix this before continuing with STIGification, exiting." > $errorlog
