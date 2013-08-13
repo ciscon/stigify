@@ -1,0 +1,1 @@
+STIGify an EL6 installation.  As of now there are still a few manual changes that must be done afterward (such as enabling and customizing banners to be displayed upon login attempts) being that these will differ from location to location.
