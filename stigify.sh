@@ -6,6 +6,9 @@
 #note:this is not recommended, you should enable selinux before or after stigification manually to assure nothing breaks (which is likely).
 enable_selinux=0
 
+#remove xwindows environment if it exists
+disable_xwin=0
+
 logfile="/tmp/stig_`date +'%m-%d-%y-%T'`"
 errorlog="/tmp/stig_err_`date +'%m-%d-%y-%T'`"
 
@@ -15,9 +18,10 @@ if `which whiptail >/dev/null 2>&1`; then
 elif  `which dialog >/dev/null 2>&1` ;then
   progress=`which dialog`
 else
-  echo asdfasdfasdfasdf;sleep 10
+  echo "Initializing..."
   yum --skip-broken -y install newt >/dev/null 2>&1
   progress=`which whiptail`
+  clear
 fi
 
 
@@ -49,8 +53,9 @@ echo 3
 
 echo 5
 
-  #remove x-windows?  this is a good idea, but there may be a valid reason for it to exist.
-  #yum -y erase xorg-x11-server-common
+  if [ $disable_xwin -gt 0 ];then  
+    yum -y erase xorg-x11-server-common >>$logfile 2>&1
+  fi
 
   #disable listening on 25, even on localhost
   if [ -e /etc/postfix/master.cf ];then
@@ -388,8 +393,7 @@ install bluetooth /bin/true" > /etc/modprobe.d/disable_bluetooth.conf
 
   #fix syslog permissions
   chmod 0600 /var/log/* >>$logfile 2>&1
-  cd /var/log
-  find -O1 -type d |xargs chmod 0700
+  find -O1 /var/log -type d |xargs chmod 0700 >>$logfile 2>&1
 
   #remove privileged accounts
   userdel shutdown >>$logfile 2>&1
