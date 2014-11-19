@@ -34,11 +34,24 @@ fi
 }
 
 
+function check_el_version {
+el6=0
+if [ -e /etc/redhat-release ];then
+  el6=`grep " 6\." -c /etc/redhat-release`
+fi
+
+if [ $el6 -ne 1 ];then
+    echo "Only EL 6 is supported by this script, exiting." > $errorlog
+    exit 3
+fi
+}
+
+
 function stig {
 echo 0
 
   #fix log permissions
-  chmod 755 /var/log
+  chmod -f 755 /var/log
 
   if [ $enable_selinux -gt 0 ];then
 echo 2
@@ -100,8 +113,12 @@ echo 20
 
 
 #start auditd for auditctl to work
-chmod 0700 /var/log/audit
-/etc/init.d/auditd start >>$logfile 2>&1
+  if [ -e /var/log/audit ];then
+    chmod -f 0700 /var/log/audit
+  fi
+  if [ -e /etc/init.d/auditd ];then
+    /etc/init.d/auditd start >>$logfile 2>&1
+  fi
   #audit localtime
   if [ `auditctl -l | grep -c "watch=/etc/localtime"` -ne 1 ];then
     echo "-w /etc/localtime -p wa -k audit_time_rules" >> /etc/audit/audit.rules 
@@ -396,9 +413,9 @@ install bluetooth /bin/true" > /etc/modprobe.d/disable_bluetooth.conf
 
 
   #fix syslog permissions
-  chmod 0600 /var/log/* >>$logfile 2>&1
-  find -O1 /var/log -type d |xargs chmod 0700 >>$logfile 2>&1
-  chmod 755 /var/log >>$logfile 2>&1
+  chmod -f 0600 /var/log/* >>$logfile 2>&1
+  find -O1 /var/log -type d |xargs -r chmod -f 0700 >>$logfile 2>&1
+  chmod -f 755 /var/log >>$logfile 2>&1
 
   #remove privileged accounts
   userdel shutdown >>$logfile 2>&1
@@ -406,14 +423,14 @@ install bluetooth /bin/true" > /etc/modprobe.d/disable_bluetooth.conf
   userdel halt >>$logfile 2>&1
 
   #fix permissions
-  chmod  0640 /etc/security/access.conf >>$logfile 2>&1
+  chmod -f 0640 /etc/security/access.conf >>$logfile 2>&1
   setfacl --remove-all /etc/security/access.conf  >>$logfile 2>&1
-  chmod  0600 /etc/sysctl.conf  >>$logfile 2>&1
+  chmod -f 0600 /etc/sysctl.conf  >>$logfile 2>&1
   setfacl --remove-all /etc/sysctl.conf >>$logfile 2>&1
-  chmod 0600 -R /etc/ssh >>$logfile 2>&1
-  chmod a+rx /bin/* >>$logfile 2>&1
-  chmod a+rx /sbin/* >>$logfile 2>&1
-  chmod a+rx /usr/local/* >>$logfile 2>&1
+  chmod -f 0600 -R /etc/ssh >>$logfile 2>&1
+  chmod -f a+rx /bin/* >>$logfile 2>&1
+  chmod -f a+rx /sbin/* >>$logfile 2>&1
+  chmod -f a+rx /usr/local/* >>$logfile 2>&1
 
 
   #disable core dumps
@@ -450,7 +467,7 @@ echo 90
 
 echo 93
 
-  chmod 0744 /var/log/clamav/ -R
+  chmod -f 0744 /var/log/clamav/ -R
   chown clamav:clamav /var/clamav/* >>$logfile 2>&1
 
   #run freshclam if you wish to update virus definitions - we'll background it as it can take a while
@@ -475,12 +492,12 @@ Disallow: /" > /var/www/robots.txt
 
   #fix mysql permissions  
   if [ -d /var/lib/mysql ];then
-    chmod ug+rwx /var/lib/mysql/* -R >>$logfile 2>&1
+    chmod -f ug+rwx /var/lib/mysql/* -R >>$logfile 2>&1
   fi
 
   #remove repositories
   mkdir -p /etc/yum.repos.d.stig_backup >>$logfile 2>&1
-  mv /etc/yum.repos.d/* /etc/yum.repos.d.stig_backup/. >>$logfile 2>&1
+  mv -f /etc/yum.repos.d/* /etc/yum.repos.d.stig_backup/. >>$logfile 2>&1
   #let's make sure cron has started
   service crond start >>$logfile 2>&1
 
@@ -497,11 +514,17 @@ function check_repos {
   echo 5
   sleep 1
 
+  check_el_version
+
+  echo 10
+
   #restore old repos if we've run this before
   if [ -d /etc/yum.repos.d.stig_backup ];then
     cp -a /etc/yum.repos.d.stig_backup/* /etc/yum.repos.d/. >>$logfile 2>&1
   fi
-
+  echo 20
+  yum clean all >>$logfile 2>&1
+  echo 30
   if [ `yum repolist 2>&1|tail -n1|grep -c '[1-9]'` -lt 1 ];then
     echo "There appear to be no repositories enabled, please fix this before continuing with STIGification, exiting." > $errorlog
     exit 3 
