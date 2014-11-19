@@ -1,16 +1,27 @@
 #!/bin/bash
 # STIG enforcement script [EL6]
-# 8-13-13
+# SitScape - DG
+# 11-19-14
+
+#user configurable options:
 
 #this will force the script to enable selinux if set to non-zero value
 #note:this is not recommended, you should enable selinux before or after stigification manually to assure nothing breaks (which is likely).
 enable_selinux=0
 
 #remove xwindows environment if it exists
-disable_xwin=0
+disable_xwin=1
+
+#install and enable clamav
+enable_clamav=1
+
+#install and enable aide
+enable_aide=1
+
 
 logfile="/tmp/stig_`date +'%m-%d-%y-%T'`"
 errorlog="/tmp/stig_err_`date +'%m-%d-%y-%T'`"
+
 
 #determine which binary to use in displaying progress bar
 if `which whiptail >/dev/null 2>&1`; then
@@ -257,18 +268,20 @@ echo 65
 echo 70
 
   #enable aide filesystem auditing
-  yum -y install cron aide >>$logfile 2>&1
-  #default aide config being used, may wish to customize
+  if [ $enable_aide -eq 1 ];then
+    yum -y install cron aide >>$logfile 2>&1
+    #default aide config being used, may wish to customize
 
-  #background aid database initialization
-  nice aide -i >>$logfile 2>&1&
-  #add aide to crontab
-  if [ -e /etc/crontab ];then
-    if [ `grep -c aide /etc/crontab` -lt 1 ];then 
-      echo "05 4 * * * root /usr/sbin/aide --check" >> /etc/crontab
+    #background aid database initialization
+    nice aide -i >>$logfile 2>&1&
+    #add aide to crontab
+    if [ -e /etc/crontab ];then
+      if [ `grep -c aide /etc/crontab` -lt 1 ];then 
+        echo "05 4 * * * root /usr/sbin/aide --check" >> /etc/crontab
+      fi
+    else
+        echo "05 4 * * * root /usr/sbin/aide --check" >> /etc/crontab
     fi
-  else
-      echo "05 4 * * * root /usr/sbin/aide --check" >> /etc/crontab
   fi
 
 echo 75
@@ -463,22 +476,25 @@ install bluetooth /bin/true" > /etc/modprobe.d/disable_bluetooth.conf
 echo 90
 
   #clamav
-  yum -y install clamav clamd >>$logfile 2>&1
+  if [ $enable_clamav -eq 1 ];then
+    yum -y install clamav clamd >>$logfile 2>&1
 
 echo 93
 
-  chmod -f 0744 /var/log/clamav/ -R
-  chown clamav:clamav /var/clamav/* >>$logfile 2>&1
-
-  #run freshclam if you wish to update virus definitions - we'll background it as it can take a while
-  (freshclam >>$logfile 2>&1
-  if [ `which setsebool >/dev/null 2>&1` ];then
-    setsebool -P clamd_use_jit on
-  fi 
-  #sed -i 's/^LogFile.*/LogFile \/var\/log\/clamav\/clamav\.log/g' /etc/clamd.conf >>$logfile 2>&1
-  chkconfig clamd on >>$logfile 2>&1
-  /etc/init.d/clamd start >>$logfile 2>&1)>>$logfile 2>&1 &
- disown
+    chmod -f 0744 /var/log/clamav/ -R
+    chown clamav:clamav /var/clamav/* >>$logfile 2>&1
+  
+    #run freshclam if you wish to update virus definitions - we'll background it as it can take a while
+    (freshclam >>$logfile 2>&1
+    if [ `which setsebool >/dev/null 2>&1` ];then
+      setsebool -P clamd_use_jit on
+    fi 
+    #sed -i 's/^LogFile.*/LogFile \/var\/log\/clamav\/clamav\.log/g' /etc/clamd.conf >>$logfile 2>&1
+    chkconfig clamd on >>$logfile 2>&1
+    /etc/init.d/clamd start >>$logfile 2>&1)>>$logfile 2>&1 &
+    disown
+  
+  fi
 
 echo 97
 
