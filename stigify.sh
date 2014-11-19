@@ -70,7 +70,9 @@ echo 5
 echo 10
 
   #remove java source files
-  find /var/www/ -name *.java -exec rm {} \; >>$logfile 2>&1
+  if [ -e /var/www ];then
+    find /var/www/ -name *.java -exec rm {} \; >>$logfile 2>&1
+  fi
  
   #enable ntpd
   yum -y install ntp.x86_64 >>$logfile 2>&1
@@ -242,7 +244,7 @@ echo 70
   #default aide config being used, may wish to customize
 
   #background aid database initialization
-  nice aid -i >>$logfile 2>&1&
+  nice aide -i >>$logfile 2>&1&
   #add aide to crontab
   if [ -e /etc/crontab ];then
     if [ `grep -c aide /etc/crontab` -lt 1 ];then 
