@@ -360,6 +360,14 @@ echo 85
   sysctl -w net.ipv4.conf.all.send_redirects=0 >>$logfile 2>&1
   sed -i '/$net.ipv4.conf.all.send_redirects.*$/d' /etc/sysctl.conf >>$logfile 2>&1
   echo "net.ipv4.conf.all.send_redirects = 0">>/etc/sysctl.conf
+  
+  #kernel settings
+  sysctl -w kernel.exec-shield=1 >>$logfile 2>&1
+  sed -i '/$kernel.exec-shield*$/d' /etc/sysctl.conf >>$logfile 2>&1
+  echo "kernel.exec-shield = 1">>/etc/sysctl.conf
+  sysctl -w net.ipv4.icmp_ignore_bogus_error_responses=1 >>$logfile 2>&1
+  sed -i '/$net.ipv4.icmp_ignore_bogus_error_responses*$/d' /etc/sysctl.conf >>$logfile 2>&1
+  echo "net.ipv4.icmp_ignore_bogus_error_responses = 1">>/etc/sysctl.conf
 
   #do not accept icmpv4 redirects
   sysctl -w net.ipv4.conf.default.accept_redirects=0 >>$logfile 2>&1
